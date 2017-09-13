@@ -111,6 +111,21 @@ function build_nccl() {
    cd ../..
 }
 
+function build_mkldnn() {
+   if [[ -e ./mkldnn ]]; then
+       echo "mkldnn folder alreadt exists"
+   else
+       echo "Downloading mkldnn..."
+       git clone https://github.com/01org/mkl-dnn.git ./mkldnn
+   fi
+   cd ./mkldnn/scripts && ./prepare_mkl.sh && cd ../..
+   mkdir -p build/mkldnn
+   cd build/mkldnn
+   cmake ../../mkldnn -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR"
+   make -j 8 install
+   cd ../..
+}
+
 # In the torch/lib directory, create an installation directory
 mkdir -p tmp_install
 
@@ -118,6 +133,8 @@ mkdir -p tmp_install
 for arg in "$@"; do
     if [[ "$arg" == "nccl" ]]; then
         build_nccl
+    elif [[ "$arg" == "mkldnn" ]]; then
+        build_mkldnn
     elif [[ "$arg" == "gloo" ]]; then
         build gloo $GLOO_FLAGS
     else

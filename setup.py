@@ -15,6 +15,7 @@ import os
 from tools.setup_helpers.env import check_env_flag
 from tools.setup_helpers.cuda import WITH_CUDA, CUDA_HOME
 from tools.setup_helpers.cudnn import WITH_CUDNN, CUDNN_LIB_DIR, CUDNN_INCLUDE_DIR
+from tools.setup_helpers.mkldnn import WITH_MKLDNN, WITH_AVX512
 from tools.setup_helpers.split_types import split_types
 DEBUG = check_env_flag('DEBUG')
 WITH_DISTRIBUTED = not check_env_flag('NO_DISTRIBUTED')
@@ -79,7 +80,7 @@ distutils.unixccompiler.UnixCCompiler.link = patched_link
 
 dep_libs = [
     'TH', 'THS', 'THNN', 'THC', 'THCS', 'THCUNN', 'nccl', 'THPP', 'libshm',
-    'ATen', 'gloo', 'THD',
+    'ATen', 'gloo', 'THD', 'mkldnn',
 ]
 
 
@@ -113,6 +114,8 @@ class build_deps(Command):
             if sys.platform == 'linux':
                 libs += ['gloo']
             libs += ['THD']
+        if WITH_MKLDNN:
+            libs +=['mkldnn']
         build_libs(libs)
 
         from tools.nnwrap import generate_wrappers as generate_nn_wrappers
