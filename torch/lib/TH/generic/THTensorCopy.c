@@ -1,7 +1,10 @@
 #ifndef TH_GENERIC_FILE
 #define TH_GENERIC_FILE "generic/THTensorCopy.c"
 #else
-
+#ifdef _OPENMP
+#define TH_OMP_OVERHEAD_THRESHOLD_COPY 4000
+#include <omp.h>
+#endif
 int THTensor_(copyTransposeValid)(THTensor *tensor, THTensor *src) {
   const int MIN_SZ = 60 * 60;
   return THTensor_(isContiguous)(tensor) &&
@@ -30,8 +33,13 @@ void THTensor_(copyTranspose)(THTensor *tensor, THTensor *src) {
 
   long NR = THTensor_(size)(src, 0);
   long NC = THTensor_(size)(src, 1);
-  for (long R = 0; R < NR; R += BLOCK_SZ) {
-    for (long C = 0; C < NC; C += BLOCK_SZ) {
+  long R = 0;
+  long C = 0;
+#ifdef _OPENMP
+#pragma omp parallel for private(R,C) collapse(2)
+#endif
+  for (R = 0; R < NR; R += BLOCK_SZ) {
+    for (C = 0; C < NC; C += BLOCK_SZ) {
       real *spo = sp + R + C * NR;
       real *rpo = rp + C + R * NC;
 
@@ -69,20 +77,59 @@ void THTensor_(copyTranspose)(THTensor *tensor, THTensor *src) {
 void THTensor_(copy)(THTensor *tensor, THTensor *src)
 {
   if (tensor == src) return;
-  if (THTensor_(isContiguous)(tensor) && THTensor_(isContiguous)(src) && THTensor_(nElement)(tensor) == THTensor_(nElement)(src)) {
-    real *sp = THTensor_(data)(src);
-    real *rp = THTensor_(data)(tensor);
-    ptrdiff_t sz = THTensor_(nElement)(tensor);
+  ptrdiff_t tensorSize = THTensor_(nElement)(tensor);
+  ptrdiff_t srcSize = THTensor_(nElement)(src);
+  int tensorContig = THTensor_(isContiguous)(tensor);
+  int srcContig = THTensor_(isContiguous)(src);
+
+  int serial_path = 0;
+  int inOMP = omp_in_parallel();
+  if (tensorSize != tensorSize) {
+    if ( tensorContig && srcContig) {
+      real *sp = THTensor_(data)(src);
+      real *rp = THTensor_(data)(tensor);
 #ifndef TH_REAL_IS_HALF
-    THVector_(copy)(rp, sp, sz);
+      THVector_(copy)(rp, sp, srcSize);
 #else
-    memcpy(rp, sp, sz * sizeof(real));
+
+#ifdef _OPENMP
+      if ((srcSize > TH_OMP_OVERHEAD_THRESHOLD_COPY) && (!inOMP)) {
+        ptrdiff_t i;
+        #pragma omp parallel for private (i)
+        for(i=0; i<srcSize; i++){
+          rp[i] = sp[i];
+        }
+      } else {
+        memcpy(rp, sp, srcSize * sizeof(real));
+      }
+#else
+      memcpy(rp, sp, srcSize * sizeof(real));
 #endif
+
+#endif
+
 #ifndef TH_REAL_IS_HALF
-  } else if (THTensor_(copyTransposeValid)(tensor, src)) {
-    THTensor_(copyTranspose)(tensor, src);
+    } else if (THTensor_(copyTransposeValid)(tensor, src)) {
+      THTensor_(copyTranspose)(tensor, src);
 #endif
+    } else {
+#ifdef _OPENMP
+      int tensorZeroStride = THTensor_(hasZeroStride)(tensor);
+      int srcZeroStride = THTensor_(hasZeroStride)(src);
+      if (inOMP && (tensorZeroStride||srcZeroStride)) {
+        serial_path = 1;
+      } else {
+        TH_TENSOR_APPLY2_ADVANCED_INDEX(srcSize, tensorContig, srcContig, real, tensor, real, src, *tensor_data = *src_data;)
+      }
+#else
+      TH_TENSOR_APPLY2(real, tensor, real, src, *tensor_data = *src_data;)
+#endif
+    }
   } else {
+    serial_path = 1;
+  }
+
+  if (serial_path) {
     TH_TENSOR_APPLY2(real, tensor, real, src, *tensor_data = *src_data;)
   }
 }
