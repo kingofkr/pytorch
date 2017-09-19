@@ -39,9 +39,8 @@ void THTensor_(copyTranspose)(THTensor *tensor, THTensor *src) {
 #ifdef _OPENMP
 #pragma omp parallel for private(R,C) collapse(2)
 #endif
-  for (int64_t R = 0; R < NR; R += BLOCK_SZ) {
-    for (int64_t C = 0; C < NC; C += BLOCK_SZ) {
-      
+  for (R = 0; R < NR; R += BLOCK_SZ) {
+    for (C = 0; C < NC; C += BLOCK_SZ) {
       real *spo = sp + R + C * NR;
       real *rpo = rp + C + R * NC;
 

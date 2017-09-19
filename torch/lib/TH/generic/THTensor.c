@@ -642,13 +642,12 @@ int THTensor_(isTransposed)(const THTensor *self)
 
 int THTensor_(hasZeroStride)(const THTensor *self)
 {
-  long z = 1;
   int d;
   for(d = self->nDimension-1; d >= 0; d--)
   {
     if(self->stride[d] == 0)
     {
-		return 1;
+      return 1;
     }
   }
   return 0;

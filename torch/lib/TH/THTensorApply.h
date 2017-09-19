@@ -15,7 +15,7 @@
 #include <omp.h>
 #include <x86intrin.h>
 
-extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* strideBySize);
+extern ptrdiff_t calOffsetByLineIndex(ptrdiff_t index, int64_t *stride, int dim, int64_t* strideBySize);
 
 #define TH_TENSOR_APPLY3_ADVANCED_INDEX(SIZE, CONTIG1, CONTIG2, CONTIG3, TYPE1, TENSOR1, TYPE2, TENSOR2, TYPE3, TENSOR3, CODE) \
 {                                                                             \
@@ -26,8 +26,8 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
   TYPE1 *rp = THTensor_(data)(TENSOR1);                                                                 \
   TYPE2 *tp = THTensor_(data)(TENSOR2);                                                                 \
   TYPE3 *srcp = THTensor_(data)(TENSOR3);                                                               \
+  ptrdiff_t iter = 0;\
   if(CONTIG1 && CONTIG2 && CONTIG3){                                                                    \
-    ptrdiff_t iter = 0;\
     if (rp != tp) { \
       PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY) )  \
       PRAGMA(ivdep) \
@@ -48,11 +48,9 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
     }\
   } else if(CONTIG1 && CONTIG2){              \
     /*TENSOR3 is not contig*/ \
-    ptrdiff_t iter = 0;\
-                      \
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY) )  \
     for (iter = 0; iter < SIZE; iter++) {\
-      ptrdiff_t TENSOR3##BasicIndex = SearchingIndex(iter, TENSOR3->stride, TENSOR3##Dim, TENSOR3->size);\
+      ptrdiff_t TENSOR3##BasicIndex = calOffsetByLineIndex(iter, TENSOR3->stride, TENSOR3##Dim, TENSOR3->size);\
       TYPE3 *TENSOR3##_data = srcp+TENSOR3##BasicIndex;\
       TYPE2 *TENSOR2##_data = tp+iter;\
       TYPE1 *TENSOR1##_data = rp+iter;\
@@ -60,11 +58,9 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
     }\
   } else if(CONTIG1 && CONTIG3){              \
     /*TENSOR2 is not contig*/ \
-    ptrdiff_t iter = 0;\
-                      \
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY) )  \
     for (iter = 0; iter < SIZE; iter++) {\
-      ptrdiff_t TENSOR2##BasicIndex = SearchingIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
+      ptrdiff_t TENSOR2##BasicIndex = calOffsetByLineIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
                                                          \
       TYPE3 *TENSOR3##_data = srcp+iter;\
       TYPE2 *TENSOR2##_data = tp+TENSOR2##BasicIndex;\
@@ -73,11 +69,9 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
     }\
   } else if(CONTIG2 && CONTIG3){              \
     /*TENSOR1 is not contig*/ \
-    ptrdiff_t iter = 0;\
-                      \
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY) )  \
     for (iter = 0; iter < SIZE; iter++) {\
-      ptrdiff_t TENSOR1##BasicIndex = SearchingIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
+      ptrdiff_t TENSOR1##BasicIndex = calOffsetByLineIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
                                                          \
       TYPE3 *TENSOR3##_data = srcp+iter;\
       TYPE2 *TENSOR2##_data = tp+iter;\
@@ -86,12 +80,10 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
     }\
   } else if(CONTIG3){\
     /* only tensor3 is contig*/ \
-    ptrdiff_t iter = 0;\
-                      \
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY) )  \
     for (iter = 0; iter < SIZE; iter++) {\
-      ptrdiff_t TENSOR2##BasicIndex = SearchingIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
-      ptrdiff_t TENSOR1##BasicIndex = SearchingIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
+      ptrdiff_t TENSOR2##BasicIndex = calOffsetByLineIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
+      ptrdiff_t TENSOR1##BasicIndex = calOffsetByLineIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
       TYPE3 *TENSOR3##_data = srcp+iter;\
       TYPE2 *TENSOR2##_data = tp+TENSOR2##BasicIndex;\
       TYPE1 *TENSOR1##_data = rp+TENSOR1##BasicIndex;\
@@ -99,12 +91,10 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
     }\
   } else if(CONTIG2){\
     /* only tensor2 is contig*/ \
-    ptrdiff_t iter = 0;\
-                      \
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY) )  \
     for (iter = 0; iter < SIZE; iter++) {\
-      ptrdiff_t TENSOR3##BasicIndex = SearchingIndex(iter, TENSOR3->stride, TENSOR3##Dim, TENSOR3->size);\
-      ptrdiff_t TENSOR1##BasicIndex = SearchingIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
+      ptrdiff_t TENSOR3##BasicIndex = calOffsetByLineIndex(iter, TENSOR3->stride, TENSOR3##Dim, TENSOR3->size);\
+      ptrdiff_t TENSOR1##BasicIndex = calOffsetByLineIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
       TYPE3 *TENSOR3##_data = srcp+TENSOR3##BasicIndex;\
       TYPE2 *TENSOR2##_data = tp+iter;\
       TYPE1 *TENSOR1##_data = rp+TENSOR1##BasicIndex;\
@@ -112,26 +102,22 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
     }\
   } else if(CONTIG1){\
     /* only tensor1 is contig*/ \
-    ptrdiff_t iter = 0;\
-                      \
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY) )  \
     for (iter = 0; iter < SIZE; iter++) {\
-      ptrdiff_t TENSOR3##BasicIndex = SearchingIndex(iter, TENSOR3->stride, TENSOR3##Dim, TENSOR3->size);\
-      ptrdiff_t TENSOR2##BasicIndex = SearchingIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
+      ptrdiff_t TENSOR3##BasicIndex = calOffsetByLineIndex(iter, TENSOR3->stride, TENSOR3##Dim, TENSOR3->size);\
+      ptrdiff_t TENSOR2##BasicIndex = calOffsetByLineIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
       TYPE3 *TENSOR3##_data = srcp+TENSOR3##BasicIndex;\
       TYPE2 *TENSOR2##_data = tp+TENSOR2##BasicIndex;\
       TYPE1 *TENSOR1##_data = rp+iter;\
       CODE                                \
     }\
   } else {\
-    ptrdiff_t iter = 0;\
-                      \
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY) )  \
     /*there is no parallelism below this level*/ \
     for (iter = 0; iter < SIZE; iter++) {\
-      ptrdiff_t TENSOR3##BasicIndex = SearchingIndex(iter, TENSOR3->stride, TENSOR3##Dim, TENSOR3->size);\
-      ptrdiff_t TENSOR2##BasicIndex = SearchingIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
-      ptrdiff_t TENSOR1##BasicIndex = SearchingIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
+      ptrdiff_t TENSOR3##BasicIndex = calOffsetByLineIndex(iter, TENSOR3->stride, TENSOR3##Dim, TENSOR3->size);\
+      ptrdiff_t TENSOR2##BasicIndex = calOffsetByLineIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
+      ptrdiff_t TENSOR1##BasicIndex = calOffsetByLineIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
       \
       TYPE3 *TENSOR3##_data = srcp+TENSOR3##BasicIndex;\
       TYPE2 *TENSOR2##_data = tp+TENSOR2##BasicIndex;\
@@ -172,7 +158,7 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY) )  \
     for (iter=0; iter<(SIZE); iter++) { \
       ptrdiff_t TENSOR1##BasicIndex = iter; \
-      ptrdiff_t TENSOR2##BasicIndex = SearchingIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
+      ptrdiff_t TENSOR2##BasicIndex = calOffsetByLineIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
       TYPE1 *TENSOR1##_data = rp+TENSOR1##BasicIndex;\
       TYPE2 *TENSOR2##_data = tp+TENSOR2##BasicIndex;\
       CODE                                           \
@@ -180,7 +166,7 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
   } else if(CONTIG2){\
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY)  )  \
     for (iter = 0; iter < SIZE; iter++) {\
-      ptrdiff_t TENSOR1##BasicIndex = SearchingIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
+      ptrdiff_t TENSOR1##BasicIndex = calOffsetByLineIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
       ptrdiff_t TENSOR2##BasicIndex = iter; \
       TYPE2 *TENSOR2##_data = tp+TENSOR2##BasicIndex;\
       TYPE1 *TENSOR1##_data = rp+TENSOR1##BasicIndex;\
@@ -190,8 +176,8 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
     PRAGMA( omp parallel for if (SIZE > TH_OMP_OVERHEAD_THRESHOLD_COPY)  )  \
     /*there is no parallelism below this level*/ \
     for (iter = 0; iter < SIZE; iter++) {\
-      ptrdiff_t TENSOR1##BasicIndex = SearchingIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
-      ptrdiff_t TENSOR2##BasicIndex = SearchingIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
+      ptrdiff_t TENSOR1##BasicIndex = calOffsetByLineIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
+      ptrdiff_t TENSOR2##BasicIndex = calOffsetByLineIndex(iter, TENSOR2->stride, TENSOR2##Dim, TENSOR2->size);\
       TYPE2 *TENSOR2##_data = tp+TENSOR2##BasicIndex;\
       TYPE1 *TENSOR1##_data = rp+TENSOR1##BasicIndex;\
       CODE                                           \
@@ -215,7 +201,7 @@ extern ptrdiff_t SearchingIndex(ptrdiff_t index, long *stride, int dim, long* st
   } else { \
     PRAGMA2( omp parallel for if (TENSOR1##Size > TH_OMP_OVERHEAD_THRESHOLD_COPY) reduction(OPERATION) ) \
     for (iter = 0; iter < TENSOR1##Size; iter++) {\
-      ptrdiff_t TENSOR1##BasicIndex = SearchingIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
+      ptrdiff_t TENSOR1##BasicIndex = calOffsetByLineIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
       TYPE1 * TENSOR1##_data = rp+TENSOR1##BasicIndex;\
       CODE                                \
     }\
