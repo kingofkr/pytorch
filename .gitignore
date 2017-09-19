@@ -37,6 +37,7 @@ test/.coverage
 */**/*.dylib*
 test/data/legacy_serialized.pt
 test/data/linear.pt
+install.sh
 
 # IPython notebook checkpoints
 .ipynb_checkpoints
