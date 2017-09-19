@@ -31,10 +31,10 @@ void THTensor_(copyTranspose)(THTensor *tensor, THTensor *src) {
   real *rp = THTensor_(data)(tensor);
   real *bp = THTensor_(data)(buf);
 
-  long NR = THTensor_(size)(src, 0);
-  long NC = THTensor_(size)(src, 1);
-  long R = 0;
-  long C = 0;
+  int64_t NR = THTensor_(size)(src, 0);
+  int64_t NC = THTensor_(size)(src, 1);
+  int64_t R = 0;
+  int64_t C = 0;
 #ifdef _OPENMP
 #pragma omp parallel for private(R,C) collapse(2)
 #endif
@@ -159,22 +159,22 @@ void THTensor_(copy##TYPENAMESRC)(THTensor *tensor, TH##TYPENAMESRC##Tensor *src
 }
 
 #ifndef TH_REAL_IS_HALF
-IMPLEMENT_THTensor_COPY(Byte, unsigned char)
-IMPLEMENT_THTensor_COPY(Char, char)
-IMPLEMENT_THTensor_COPY(Short, short)
-IMPLEMENT_THTensor_COPY(Int, int)
-IMPLEMENT_THTensor_COPY(Long, long)
+IMPLEMENT_THTensor_COPY(Byte, uint8_t)
+IMPLEMENT_THTensor_COPY(Char, int8_t)
+IMPLEMENT_THTensor_COPY(Short, int16_t)
+IMPLEMENT_THTensor_COPY(Int, int32_t)
+IMPLEMENT_THTensor_COPY(Long, int64_t)
 IMPLEMENT_THTensor_COPY(Float, float)
 IMPLEMENT_THTensor_COPY(Double, double)
 IMPLEMENT_THTensor_COPY_FROM_HALF(Half, THHalf)
 #else
 /* only allow pass-through for Half */
 IMPLEMENT_THTensor_COPY_TO_FROM_HALF(Half, THHalf)
-IMPLEMENT_THTensor_COPY_TO_HALF(Byte, unsigned char)
-IMPLEMENT_THTensor_COPY_TO_HALF(Char, char)
-IMPLEMENT_THTensor_COPY_TO_HALF(Short, short)
-IMPLEMENT_THTensor_COPY_TO_HALF(Int, int)
-IMPLEMENT_THTensor_COPY_TO_HALF(Long, long)
+IMPLEMENT_THTensor_COPY_TO_HALF(Byte, uint8_t)
+IMPLEMENT_THTensor_COPY_TO_HALF(Char, int8_t)
+IMPLEMENT_THTensor_COPY_TO_HALF(Short, int16_t)
+IMPLEMENT_THTensor_COPY_TO_HALF(Int, int32_t)
+IMPLEMENT_THTensor_COPY_TO_HALF(Long, int64_t)
 IMPLEMENT_THTensor_COPY_TO_HALF(Float, float)
 IMPLEMENT_THTensor_COPY_TO_HALF(Double, double)
 
