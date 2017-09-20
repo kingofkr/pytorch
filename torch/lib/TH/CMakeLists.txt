@@ -384,7 +384,7 @@ INSTALL(TARGETS TH
   ARCHIVE DESTINATION "${TH_INSTALL_LIB_SUBDIR}")
 
 INSTALL(FILES
-  generalFunc.h
+  THUtil.h
   TH.h
   THAllocator.h
   THMath.h

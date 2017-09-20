@@ -114,9 +114,7 @@ void THTensor_(copy)(THTensor *tensor, THTensor *src)
 #endif
     } else {
 #ifdef _OPENMP
-      int tensorZeroStride = THTensor_(hasZeroStride)(tensor);
-      int srcZeroStride = THTensor_(hasZeroStride)(src);
-      if (inOMP || (tensorZeroStride||srcZeroStride)) {
+      if (inOMP) {
         serial_path = 1;
       } else {
         TH_TENSOR_APPLY2_ADVANCED_INDEX(srcSize, tensorContig, srcContig, real, tensor, real, src, *tensor_data = *src_data;)
