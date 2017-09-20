@@ -17,7 +17,7 @@
 
 extern ptrdiff_t calOffsetByLineIndex(ptrdiff_t index, int64_t *stride, int dim, int64_t* strideBySize);
 
-#define TH_TENSOR_APPLY3_ADVANCED_INDEX(SIZE, CONTIG1, CONTIG2, CONTIG3, TYPE1, TENSOR1, TYPE2, TENSOR2, TYPE3, TENSOR3, CODE) \
+#define TH_TENSOR_APPLY3_OMP(SIZE, CONTIG1, CONTIG2, CONTIG3, TYPE1, TENSOR1, TYPE2, TENSOR2, TYPE3, TENSOR3, CODE) \
 {                                                                             \
   int TENSOR1##Dim = TENSOR1->nDimension;                                     \
   int TENSOR2##Dim = TENSOR2->nDimension;                                     \
@@ -127,7 +127,7 @@ extern ptrdiff_t calOffsetByLineIndex(ptrdiff_t index, int64_t *stride, int dim,
   }\
 }
 
-#define TH_TENSOR_APPLY2_ADVANCED_INDEX(SIZE, CONTIG1, CONTIG2, TYPE1, TENSOR1, TYPE2, TENSOR2, CODE) \
+#define TH_TENSOR_APPLY2_OMP(SIZE, CONTIG1, CONTIG2, TYPE1, TENSOR1, TYPE2, TENSOR2, CODE) \
 {                                                                             \
   int TENSOR1##Dim = TENSOR1->nDimension;                                     \
   int TENSOR2##Dim = TENSOR2->nDimension;                                     \
@@ -186,7 +186,7 @@ extern ptrdiff_t calOffsetByLineIndex(ptrdiff_t index, int64_t *stride, int dim,
 \
 }
 
-#define TH_TENSOR_APPLY_REDUCTION_ADVANCED_INDEX(SIZE, TYPE1, TENSOR1, OPERATION, CODE) \
+#define TH_TENSOR_APPLY_REDUCTION_OMP(SIZE, TYPE1, TENSOR1, OPERATION, CODE) \
 {                                                                               \
   int TENSOR1##Dim = TENSOR1->nDimension;                                     \                                      \
   TYPE1 *rp = THTensor_(data)(TENSOR1);                                    \

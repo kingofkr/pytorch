@@ -117,7 +117,7 @@ void THTensor_(copy)(THTensor *tensor, THTensor *src)
       if (inOMP) {
         serial_path = 1;
       } else {
-        TH_TENSOR_APPLY2_ADVANCED_INDEX(srcSize, tensorContig, srcContig, real, tensor, real, src, *tensor_data = *src_data;)
+        TH_TENSOR_APPLY2_OMP(srcSize, tensorContig, srcContig, real, tensor, real, src, *tensor_data = *src_data;)
       }
 #else
       serial_path = 1;
