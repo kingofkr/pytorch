@@ -186,20 +186,22 @@ extern ptrdiff_t calOffsetByLineIndex(ptrdiff_t index, int64_t *stride, int dim,
 \
 }
 
-#define TH_TENSOR_APPLY_REDUCTION_OMP(SIZE, TYPE1, TENSOR1, OPERATION, CODE) \
-{                                                                               \
-  int TENSOR1##Dim = TENSOR1->nDimension;                                     \                                      \
-  TYPE1 *rp = THTensor_(data)(TENSOR1);                                    \
+#define TH_TENSOR_APPLY_REDUCTION_OMP(TYPE1, TENSOR1, OPERATION, CODE) \
+{                                                                            \
+  int TENSOR1##Dim = TENSOR1->nDimension;                                    \
+  TYPE1 *rp = THTensor_(data)(TENSOR1);                                      \
+  int TENSOR1##Contg = THTensor_(isContiguous)(TENSOR1);                     \
+  ptrdiff_t TENSOR1##Size = THTensor_(nElement)(TENSOR1);                     \
   ptrdiff_t iter = 0;\
   if(TENSOR1##Contg){                                    \
     TYPE1 *TENSOR1##_data = NULL;         \
-    PRAGMA2( omp parallel for if (TENSOR1##Size > TH_OMP_OVERHEAD_THRESHOLD_COPY) private(TENSOR1##_data,  iter) reduction(OPERATION) ) \
+    PRAGMA( omp parallel for if (TENSOR1##Size > TH_OMP_OVERHEAD_THRESHOLD_COPY) private(TENSOR1##_data,  iter) reduction(OPERATION) ) \
     for (iter = 0; iter < TENSOR1##Size; iter++) {\
       TENSOR1##_data = rp+iter;\
       CODE                                \
     }\
   } else { \
-    PRAGMA2( omp parallel for if (TENSOR1##Size > TH_OMP_OVERHEAD_THRESHOLD_COPY) reduction(OPERATION) ) \
+    PRAGMA( omp parallel for if (TENSOR1##Size > TH_OMP_OVERHEAD_THRESHOLD_COPY) reduction(OPERATION) ) \
     for (iter = 0; iter < TENSOR1##Size; iter++) {\
       ptrdiff_t TENSOR1##BasicIndex = calOffsetByLineIndex(iter, TENSOR1->stride, TENSOR1##Dim, TENSOR1->size);\
       TYPE1 * TENSOR1##_data = rp+TENSOR1##BasicIndex;\

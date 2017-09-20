@@ -616,14 +616,40 @@ real THTensor_(medianall)(THTensor *tensor)
 accreal THTensor_(sumall)(THTensor *tensor)
 {
   accreal sum = 0;
-  TH_TENSOR_APPLY(real, tensor, sum += *tensor_data;);
+  int serial_path = 0;
+#ifdef _OPENMP
+  int inOMP = omp_in_parallel();
+  if(inOMP) {
+    serial_path = 1;
+  } else {
+    TH_TENSOR_APPLY_REDUCTION_OMP(real, tensor, +:sum, sum += *tensor_data;);
+  }
+#else
+    serial_path = 1;
+#endif
+  if (serial_path) {
+    TH_TENSOR_APPLY(real, tensor, sum += *tensor_data;);
+  }
   return sum;
 }
 
 accreal THTensor_(prodall)(THTensor *tensor)
 {
   accreal prod = 1;
-  TH_TENSOR_APPLY(real, tensor, prod *= *tensor_data;);
+  int serial_path = 0;
+#ifdef _OPENMP
+  int inOMP = omp_in_parallel();
+  if(inOMP) {
+    serial_path = 1;
+  } else {
+    TH_TENSOR_APPLY_REDUCTION_OMP(real, tensor, *:prod, prod *= *tensor_data;);
+  }
+#else
+    serial_path = 1;
+#endif
+  if (serial_path) {
+    TH_TENSOR_APPLY(real, tensor, prod *= *tensor_data;);
+  }
   return prod;
 }
 
@@ -2197,23 +2223,67 @@ void THTensor_(sum)(THTensor *r_, THTensor *t, int dimension, int keepdim)
   THTensor_(resize)(r_, dim, NULL);
   THLongStorage_free(dim);
 
-  // two implementations optimized for data locality
-  if (t->stride[dimension] == 1) {
-    TH_TENSOR_DIM_APPLY2(real, t, real, r_, dimension,
-                         accreal sum = 0;
-                         int64_t i;
-                         for(i = 0; i < t_size; i++)
-                           sum += t_data[i*t_stride];
-                         *r__data = (real)sum;);
+  int serial_path = 0;
+#ifdef _OPENMP
+  int inOMP = omp_in_parallel();
+  if (inOMP) {
+    serial_path = 1;
   } else {
-    THTensor_(zero)(r_);
-    THTensor *temp_ = THTensor_(newWithTensor)(r_);
-    // r_.expand_as(t)
-    temp_->size[dimension] = t->size[dimension];
-    temp_->stride[dimension] = 0;
+    int r_Contig = THTensor_(isContiguous)(r_);
+    real *tp = THTensor_(data)(t);
+    real *rp = THTensor_(data)(r_);
+    if(r_Contig && (tp != rp)){
+      ptrdiff_t iter = 0;
+      ptrdiff_t r_Size = THTensor_(nElement)(r_);
+      int r_Dim = r_->nDimension;
+      #pragma omp parallel for if ( r_Size > TH_OMP_OVERHEAD_THRESHOLD)  
+      for (iter = 0; iter < r_Size; iter++) {
+        int j;
+        int64_t quot;
+        int64_t rem = iter;
+        ptrdiff_t tBasicIndex = 0;
 
-    TH_TENSOR_APPLY2(real, temp_, real, t, *temp__data = *temp__data + *t_data;);
-    THTensor_(free)(temp_);
+        for(j = 0; j < r_Dim; ++j) {
+          if(j != dimension){
+            quot = rem/r_->stride[j];
+            rem = rem%r_->stride[j];
+            tBasicIndex += quot*t->stride[j];
+          }
+        }
+        real *t_data = tp+tBasicIndex;
+        real *r__data = rp+iter;
+        *r__data = 0;
+        for(j=0; j < t->size[dimension]; ++j) {
+          *r__data += *(t_data + j*t->stride[dimension]);
+        }
+      }
+    } else {
+      serial_path = 1;
+    }
+  }
+#else
+  serial_path = 1;
+#endif
+
+  if (serial_path) {
+    // two implementations optimized for data locality
+    if (t->stride[dimension] == 1) {
+      TH_TENSOR_DIM_APPLY2(real, t, real, r_, dimension,
+                           accreal sum = 0;
+                           int64_t i;
+                           for(i = 0; i < t_size; i++)
+                             sum += t_data[i*t_stride];
+                           *r__data = (real)sum;);
+    } else {
+      THTensor_(zero)(r_);
+      THTensor *temp_ = THTensor_(newWithTensor)(r_);
+      // r_.expand_as(t)
+      temp_->size[dimension] = t->size[dimension];
+      temp_->stride[dimension] = 0;
+
+      TH_TENSOR_APPLY2(real, temp_, real, t, *temp__data = *temp__data + *t_data;);
+      THTensor_(free)(temp_);
+    }
   }
 
   if (!keepdim) {
@@ -3335,18 +3405,15 @@ TENSOR_IMPLEMENT_LOGICAL(ne,!=)
   {                                                           \
     THTensor_(resizeAs)(r_, t);                               \
     ptrdiff_t r_Size = THTensor_(nElement)(r_);               \
-    ptrdiff_t tSize = THTensor_(nElement)(t);                 \
     int r_Contig = THTensor_(isContiguous)(r_);               \
     int tContig = THTensor_(isContiguous)(t);                 \
-    int tZeroStride = THTensor_(hasZeroStride)(t);            \
-    int r_ZeroStride = THTensor_(hasZeroStride)(r_);          \
     int inOMP = omp_in_parallel();                            \
-    if( (tSize == r_Size) && (r_Size > TH_OMP_OVERHEAD_THRESHOLD) && (!inOMP) && (!tZeroStride) && (!r_ZeroStride) ){    \
+    if( (r_Size > TH_OMP_OVERHEAD_THRESHOLD) && (!inOMP) ){   \
       TH_TENSOR_APPLY2_OMP(r_Size, r_Contig, tContig, real, r_, real, t, *r__data = CFUNC(*t_data););        \
-    }                                                                                                                    \
-    else {                                                                                                               \
-      TH_TENSOR_APPLY2(real, r_, real, t, *r__data = CFUNC(*t_data););                                                   \
-    }                                                                                                                    \
+    }                                                                                                        \
+    else {                                                                                                   \
+      TH_TENSOR_APPLY2(real, r_, real, t, *r__data = CFUNC(*t_data););                                       \
+    }                                                                                                        \
   }
 #else
 
