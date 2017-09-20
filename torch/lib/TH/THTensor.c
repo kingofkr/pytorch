@@ -8,7 +8,7 @@
 #include "THRandom.h"
 #include "THTensorDimApply.h"
 #include "THMath.h"
-#include "generalFunc.h"
+#include "THUtil.h"
 
 #include "generic/THTensor.c"
 #include "THGenerateAllTypes.h"
