@@ -15,7 +15,7 @@ import os
 from tools.setup_helpers.env import check_env_flag
 from tools.setup_helpers.cuda import WITH_CUDA, CUDA_HOME
 from tools.setup_helpers.cudnn import WITH_CUDNN, CUDNN_LIB_DIR, CUDNN_INCLUDE_DIR
-from tools.setup_helpers.mkldnn import WITH_MKLDNN, WITH_AVX512
+from tools.setup_helpers.mkldnn import WITH_MKLDNN, MKLDNN_LIB_DIR, MKLDNN_INCLUDE_DIR
 from tools.setup_helpers.split_types import split_types
 DEBUG = check_env_flag('DEBUG')
 WITH_DISTRIBUTED = not check_env_flag('NO_DISTRIBUTED')
@@ -193,6 +193,10 @@ class build_ext(setuptools.command.build_ext.build_ext):
             print('-- Building NCCL library')
         else:
             print('-- Not using NCCL')
+        if WITH_MKLDNN:
+            print('-- Using MKLDNN')
+        else:
+            print('-- Not using MKLDNN')
         if WITH_DISTRIBUTED:
             print('-- Building with distributed package ')
         else:
@@ -207,6 +211,7 @@ class build_ext(setuptools.command.build_ext.build_ext):
         from tools.cwrap.plugins.KwargsPlugin import KwargsPlugin
         from tools.cwrap.plugins.NullableArguments import NullableArguments
         from tools.cwrap.plugins.CuDNNPlugin import CuDNNPlugin
+        from tools.cwrap.plugins.MkldnnPlugin import MkldnnPlugin
         from tools.cwrap.plugins.WrapDim import WrapDim
         from tools.cwrap.plugins.AssertNDim import AssertNDim
         from tools.cwrap.plugins.Broadcast import Broadcast
@@ -219,6 +224,9 @@ class build_ext(setuptools.command.build_ext.build_ext):
         ])
         cwrap('torch/csrc/cudnn/cuDNN.cwrap', plugins=[
             CuDNNPlugin(), NullableArguments()
+        ])
+        cwrap('torch/csrc/mkldnn/mkldnn.cwrap', plugins=[
+            MkldnnPlugin(), NullableArguments()
         ])
         # It's an old-style class in Python 2.7...
         setuptools.command.build_ext.build_ext.run(self)
@@ -428,6 +436,15 @@ if WITH_CUDNN:
         "torch/csrc/cudnn/Handles.cpp",
     ]
     extra_compile_args += ['-DWITH_CUDNN']
+
+if WITH_MKLDNN:
+    main_sources += [
+        "torch/csrc/mkldnn/Conv.cpp",
+        "torch/csrc/mkldnn/Runtime.cpp",
+        "torch/csrc/mkldnn/Types.cpp",
+        "torch/csrc/mkldnn/mkldnn.cpp",
+    ]
+    extra_compile_args += ['-DWITH_MKLDNN']
 
 if DEBUG:
     extra_compile_args += ['-O0', '-g']

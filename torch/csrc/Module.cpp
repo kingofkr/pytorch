@@ -14,6 +14,10 @@
 #include "cudnn/Module.h"
 #endif
 
+#ifdef WITH_MKLDNN
+#include "mkldnn/Module.h"
+#endif
+
 #define WITH_NUMPY_IMPORT_ARRAY
 #include "THP.h"
 
@@ -798,6 +802,9 @@ PyMODINIT_FUNC PyInit__C()
 #ifdef WITH_CUDNN
   THPUtils_addPyMethodDefs(methods, THCUDNN_methods());
 #endif
+#ifdef WITH_MKLDNN
+  THPUtils_addPyMethodDefs(methods, THMKLDNN_methods());
+#endif
 #ifdef WITH_DISTRIBUTED
   THPUtils_addPyMethodDefs(methods, THDPModule_methods());
 #endif
@@ -890,6 +897,14 @@ PyMODINIT_FUNC PyInit__C()
 #endif
   Py_INCREF(has_cudnn);
   ASSERT_TRUE(PyModule_AddObject(module, "has_cudnn", has_cudnn) == 0);
+
+#ifdef WITH_MKLDNN
+  PyObject *has_mkldnn = Py_True;
+#else
+  PyObject *has_mkldnn = Py_False;
+#endif
+  Py_INCREF(has_mkldnn);
+  ASSERT_TRUE(PyModule_AddObject(module, "has_mkldnn", has_mkldnn) == 0);
 
 #ifdef WITH_DISTRIBUTED_MW
   // See comment on CUDA objects
