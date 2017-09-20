@@ -36,9 +36,6 @@ void THTensor_(copyTranspose)(THTensor *tensor, THTensor *src) {
   int64_t NC = THTensor_(size)(src, 1);
   int64_t R = 0;
   int64_t C = 0;
-#ifdef _OPENMP
-#pragma omp parallel for private(R,C) collapse(2)
-#endif
   for (R = 0; R < NR; R += BLOCK_SZ) {
     for (C = 0; C < NC; C += BLOCK_SZ) {
       real *spo = sp + R + C * NR;
@@ -84,8 +81,10 @@ void THTensor_(copy)(THTensor *tensor, THTensor *src)
   int srcContig = THTensor_(isContiguous)(src);
 
   int serial_path = 0;
+#ifdef _OPENMP
   int inOMP = omp_in_parallel();
-  if (tensorSize != tensorSize) {
+#endif
+  if (tensorSize == srcSize) {
     if ( tensorContig && srcContig) {
       real *sp = THTensor_(data)(src);
       real *rp = THTensor_(data)(tensor);
@@ -117,13 +116,13 @@ void THTensor_(copy)(THTensor *tensor, THTensor *src)
 #ifdef _OPENMP
       int tensorZeroStride = THTensor_(hasZeroStride)(tensor);
       int srcZeroStride = THTensor_(hasZeroStride)(src);
-      if (inOMP && (tensorZeroStride||srcZeroStride)) {
+      if (inOMP || (tensorZeroStride||srcZeroStride)) {
         serial_path = 1;
       } else {
         TH_TENSOR_APPLY2_ADVANCED_INDEX(srcSize, tensorContig, srcContig, real, tensor, real, src, *tensor_data = *src_data;)
       }
 #else
-      TH_TENSOR_APPLY2(real, tensor, real, src, *tensor_data = *src_data;)
+      serial_path = 1;
 #endif
     }
   } else {
