@@ -113,16 +113,22 @@ function build_nccl() {
 
 function build_mkldnn() {
    if [[ -e ./mkldnn ]]; then
-       echo "mkldnn folder alreadt exists"
+     echo "mkldnn folder alreadt exists"
    else
-       echo "Downloading mkldnn..."
-       git clone https://github.com/01org/mkl-dnn.git ./mkldnn
+     echo "Downloading mkldnn..."
+     git clone https://github.com/01org/mkl-dnn.git ./mkldnn
    fi
    cd ./mkldnn/scripts && ./prepare_mkl.sh && cd ../..
    mkdir -p build/mkldnn
    cd build/mkldnn
    cmake ../../mkldnn -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR"
    make -j 8 install
+   [ -d "${INSTALL_DIR}/include/mkldnn" ] || mkdir -p ${INSTALL_DIR}/include/mkldnn
+   for header in "mkldnn.h" "mkldnn.hpp" "mkldnn_types.h"; do
+     if [ -e "${INSTALL_DIR}/include/${header}" ]; then
+       mv ${INSTALL_DIR}/include/${header} ${INSTALL_DIR}/include/mkldnn/
+     fi
+   done
    cd ../..
 }
 
