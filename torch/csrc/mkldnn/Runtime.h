@@ -1,7 +1,7 @@
 #ifndef THP_MKLDNN_RUNTIME_INC
 #define THP_MKLDNN_RUNTIME_INC
 
-//#include <mkldnn.h>
+#include <mkldnn.hpp>
 
 namespace torch { namespace mkldnn {
 

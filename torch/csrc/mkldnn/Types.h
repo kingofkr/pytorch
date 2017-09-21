@@ -4,7 +4,7 @@
 #include <Python.h>
 #include <cstddef>
 #include <string>
-//#include <mkldnn.h>
+#include <mkldnn.hpp>
 #include "../Types.h"
 #include "../THP.h"
 #include <ATen/Tensor.h>
