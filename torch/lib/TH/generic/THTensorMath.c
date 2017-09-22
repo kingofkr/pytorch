@@ -47,19 +47,10 @@
 #ifdef _OPENMP
 #define TH_TENSOR_APPLY2_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, CODE) \
 { \
-  ptrdiff_t TH_TENSOR_size = THTensor_(nElement)(TENSOR1); \
-  PRAGMA(omp parallel if (TH_TENSOR_size > TH_OMP_OVERHEAD_THRESHOLD)) \
-  { \
-    size_t num_threads = omp_get_num_threads(); \
-    size_t tid = omp_get_thread_num(); \
-    ptrdiff_t TH_TENSOR_offset = tid * (TH_TENSOR_size / num_threads); \
-    ptrdiff_t TH_TENSOR_end = tid == num_threads - 1 ? TH_TENSOR_size : \
-      TH_TENSOR_offset + TH_TENSOR_size / num_threads; \
-    ptrdiff_t TENSOR1##_len = TH_TENSOR_end - TH_TENSOR_offset; \
-    TYPE1 *TENSOR1##_data = THTensor_(data)(TENSOR1) + TH_TENSOR_offset; \
-    TYPE2 *TENSOR2##_data = THTensor_(data)(TENSOR2) + TH_TENSOR_offset; \
-    CODE \
-  } \
+  TYPE1 *TENSOR1##_data = THTensor_(data)(TENSOR1); \
+  TYPE2 *TENSOR2##_data = THTensor_(data)(TENSOR2); \
+  ptrdiff_t TENSOR1##_len = THTensor_(nElement)(TENSOR1); \
+  CODE \
 }
 #else
 #define TH_TENSOR_APPLY2_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, CODE) \

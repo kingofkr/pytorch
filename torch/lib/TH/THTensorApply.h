@@ -11,7 +11,7 @@
 #define PRAGMA(P) __pragma(P)
 #endif
 
-#define TH_OMP_OVERHEAD_THRESHOLD_COPY 4000
+#define TH_OMP_OVERHEAD_THRESHOLD_COPY 800
 #include <omp.h>
 #include <x86intrin.h>
 
