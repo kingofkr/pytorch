@@ -8,11 +8,8 @@
 
 #ifdef _OPENMP
 #include <omp.h>
+#define TH_OMP_OVERHEAD_THRESHOLD 6000
 #endif
-
-#define TH_OMP_OVERHEAD_THRESHOLD 4000
-
-#ifdef _OPENMP
 
 #ifndef _WIN32
 #define PRAGMA(P) _Pragma(#P)
@@ -20,6 +17,14 @@
 #define PRAGMA(P) __pragma(P)
 #endif
 
+#if (defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE))
+#define TH_TENSOR_APPLY_CONTIG(TYPE, TENSOR, CODE) \
+{ \
+  TYPE *TENSOR##_data = THTensor_(data)(TENSOR); \
+  ptrdiff_t TENSOR##_len = THTensor_(nElement)(TENSOR); \
+  CODE \
+}
+#elif defined(_OPENMP)
 #define TH_TENSOR_APPLY_CONTIG(TYPE, TENSOR, CODE) \
 { \
   ptrdiff_t TH_TENSOR_size = THTensor_(nElement)(TENSOR); \
@@ -44,7 +49,16 @@
 }
 #endif
 
-#ifdef _OPENMP
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+#define TH_TENSOR_APPLY2_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, CODE) \
+{ \
+  TYPE1 *TENSOR1##_data = THTensor_(data)(TENSOR1); \
+  TYPE2 *TENSOR2##_data = THTensor_(data)(TENSOR2); \
+  ptrdiff_t TENSOR1##_len = THTensor_(nElement)(TENSOR1); \
+  CODE \
+}
+#else
+#if defined(_OPENMP)
 #define TH_TENSOR_APPLY2_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, CODE) \
 { \
   ptrdiff_t TH_TENSOR_size = THTensor_(nElement)(TENSOR1); \
@@ -70,8 +84,19 @@
   CODE \
 }
 #endif
+#endif
 
-#ifdef _OPENMP
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+#define TH_TENSOR_APPLY3_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, TYPE3, TENSOR3, CODE) \
+{ \
+  TYPE1 *TENSOR1##_data = THTensor_(data)(TENSOR1); \
+  TYPE2 *TENSOR2##_data = THTensor_(data)(TENSOR2); \
+  TYPE3 *TENSOR3##_data = THTensor_(data)(TENSOR3); \
+  ptrdiff_t TENSOR1##_len = THTensor_(nElement)(TENSOR1); \
+  CODE \
+}
+#else
+#if defined(_OPENMP)
 #define TH_TENSOR_APPLY3_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, TYPE3, TENSOR3, CODE) \
 { \
   ptrdiff_t TH_TENSOR_size = THTensor_(nElement)(TENSOR1); \
@@ -98,6 +123,7 @@
   ptrdiff_t TENSOR1##_len = THTensor_(nElement)(TENSOR1); \
   CODE \
 }
+#endif
 #endif
 
 void THTensor_(fill)(THTensor *r_, real value)
