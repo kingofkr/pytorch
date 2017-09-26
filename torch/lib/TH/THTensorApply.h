@@ -4,9 +4,7 @@
 #ifdef _OPENMP
 
 #ifndef _WIN32
-#define _STR(s)   #s
-#define STR(s)    _STR(s)
-#define PRAGMA(P) _Pragma( STR(P) )
+#define PRAGMA(P) _Pragma(#P)
 #else
 #define PRAGMA(P) __pragma(P)
 #endif

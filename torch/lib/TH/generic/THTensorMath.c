@@ -18,13 +18,15 @@
 #endif
 
 #if (defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE))
-#define TH_TENSOR_APPLY_CONTIG(TYPE, TENSOR, CODE) \
+#define TH_TENSOR_APPLY_CONTIG_FLOAT(TYPE, TENSOR, CODE) \
 { \
   TYPE *TENSOR##_data = THTensor_(data)(TENSOR); \
   ptrdiff_t TENSOR##_len = THTensor_(nElement)(TENSOR); \
   CODE \
 }
-#elif defined(_OPENMP)
+#endif
+
+#ifdef _OPENMP
 #define TH_TENSOR_APPLY_CONTIG(TYPE, TENSOR, CODE) \
 { \
   ptrdiff_t TH_TENSOR_size = THTensor_(nElement)(TENSOR); \
@@ -50,15 +52,16 @@
 #endif
 
 #if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
-#define TH_TENSOR_APPLY2_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, CODE) \
+#define TH_TENSOR_APPLY2_CONTIG_FLOAT(TYPE1, TENSOR1, TYPE2, TENSOR2, CODE) \
 { \
   TYPE1 *TENSOR1##_data = THTensor_(data)(TENSOR1); \
   TYPE2 *TENSOR2##_data = THTensor_(data)(TENSOR2); \
   ptrdiff_t TENSOR1##_len = THTensor_(nElement)(TENSOR1); \
   CODE \
 }
-#else
-#if defined(_OPENMP)
+#endif
+
+#ifdef _OPENMP
 #define TH_TENSOR_APPLY2_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, CODE) \
 { \
   ptrdiff_t TH_TENSOR_size = THTensor_(nElement)(TENSOR1); \
@@ -84,10 +87,9 @@
   CODE \
 }
 #endif
-#endif
 
 #if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
-#define TH_TENSOR_APPLY3_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, TYPE3, TENSOR3, CODE) \
+#define TH_TENSOR_APPLY3_CONTIG_FLOAT(TYPE1, TENSOR1, TYPE2, TENSOR2, TYPE3, TENSOR3, CODE) \
 { \
   TYPE1 *TENSOR1##_data = THTensor_(data)(TENSOR1); \
   TYPE2 *TENSOR2##_data = THTensor_(data)(TENSOR2); \
@@ -95,8 +97,9 @@
   ptrdiff_t TENSOR1##_len = THTensor_(nElement)(TENSOR1); \
   CODE \
 }
-#else
-#if defined(_OPENMP)
+#endif
+
+#ifdef _OPENMP
 #define TH_TENSOR_APPLY3_CONTIG(TYPE1, TENSOR1, TYPE2, TENSOR2, TYPE3, TENSOR3, CODE) \
 { \
   ptrdiff_t TH_TENSOR_size = THTensor_(nElement)(TENSOR1); \
@@ -124,12 +127,15 @@
   CODE \
 }
 #endif
-#endif
 
 void THTensor_(fill)(THTensor *r_, real value)
 {
   if (THTensor_(isContiguous)(r_) || THTensor_(isTransposed)(r_)) {
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+    TH_TENSOR_APPLY_CONTIG_FLOAT(real, r_, THVector_(fill)(r__data, value, r__len););
+#else
     TH_TENSOR_APPLY_CONTIG(real, r_, THVector_(fill)(r__data, value, r__len););
+#endif
   } else {
     TH_TENSOR_APPLY(real, r_,
       if (r__stride == 1) {
@@ -687,7 +693,11 @@ void THTensor_(add)(THTensor *r_, THTensor *t, real value)
   int tContig = THTensor_(isContiguous)(t);
   int serial_path = 0;
   if (r_Contig && tContig) {
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+    TH_TENSOR_APPLY2_CONTIG_FLOAT(real, r_, real, t, THVector_(adds)(r__data, t_data, value, r__len););
+#else
     TH_TENSOR_APPLY2_CONTIG(real, r_, real, t, THVector_(adds)(r__data, t_data, value, r__len););
+#endif
   } else {
 #ifdef _OPENMP
     int inOMP = omp_in_parallel();
@@ -718,7 +728,11 @@ void THTensor_(mul)(THTensor *r_, THTensor *t, real value)
   int tContig = THTensor_(isContiguous)(t);
   int serial_path = 0;
   if (r_Contig && tContig) {
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+    TH_TENSOR_APPLY2_CONTIG_FLOAT(real, r_, real, t, THVector_(muls)(r__data, t_data, value, r__len););
+#else
     TH_TENSOR_APPLY2_CONTIG(real, r_, real, t, THVector_(muls)(r__data, t_data, value, r__len););
+#endif
   } else {
 #ifdef _OPENMP
     int inOMP = omp_in_parallel();
@@ -744,7 +758,11 @@ void THTensor_(div)(THTensor *r_, THTensor *t, real value)
   int tContig = THTensor_(isContiguous)(t);
   int serial_path = 0;
   if (r_Contig && tContig) {
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+    TH_TENSOR_APPLY2_CONTIG_FLOAT(real, r_, real, t, THVector_(divs)(r__data, t_data, value, r__len););
+#else
     TH_TENSOR_APPLY2_CONTIG(real, r_, real, t, THVector_(divs)(r__data, t_data, value, r__len););
+#endif
   } else {
 #ifdef _OPENMP
     int inOMP = omp_in_parallel();
@@ -1116,7 +1134,11 @@ void THTensor_(cadd)(THTensor *r_, THTensor *t, real value, THTensor *src)
       if(r_ == t) {
         THBlas_(axpy)(THTensor_(nElement)(t), value, THTensor_(data)(src), 1, THTensor_(data)(r_), 1);
       } else {
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+        TH_TENSOR_APPLY3_CONTIG_FLOAT(real, r_, real, t, real, src, THVector_(cadd)(r__data, t_data, src_data, value, r__len););
+#else
         TH_TENSOR_APPLY3_CONTIG(real, r_, real, t, real, src, THVector_(cadd)(r__data, t_data, src_data, value, r__len););
+#endif
       }
     } else {
 #if _OPENMP
@@ -1154,7 +1176,11 @@ void THTensor_(cmul)(THTensor *r_, THTensor *t, THTensor *src)
   int serial_path = 0;
   if (srcSize == r_Size){
     if (r_Contig && tContig && srcContig) {
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+      TH_TENSOR_APPLY3_CONTIG_FLOAT(real, r_, real, t, real, src, THVector_(cmul)(r__data, t_data, src_data, r__len););
+#else
       TH_TENSOR_APPLY3_CONTIG(real, r_, real, t, real, src, THVector_(cmul)(r__data, t_data, src_data, r__len););
+#endif
     } else {
 #if _OPENMP
       int inOMP = omp_in_parallel();
@@ -1224,7 +1250,11 @@ void THTensor_(cdiv)(THTensor *r_, THTensor *t, THTensor *src)
   int serial_path = 0;
   if (srcSize == r_Size){
     if (r_Contig && tContig && srcContig) {
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+      TH_TENSOR_APPLY3_CONTIG_FLOAT(real, r_, real, t, real, src, THVector_(cdiv)(r__data, t_data, src_data, r__len););
+#else
       TH_TENSOR_APPLY3_CONTIG(real, r_, real, t, real, src, THVector_(cdiv)(r__data, t_data, src_data, r__len););
+#endif
     } else {
 #if _OPENMP
       int inOMP = omp_in_parallel();
