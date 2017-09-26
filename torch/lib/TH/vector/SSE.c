@@ -184,7 +184,6 @@ static void THFloatVector_fill_SSE(float *x, const float c, const ptrdiff_t n) {
   ptrdiff_t i;
   ptrdiff_t off;
   __m128 XMM0 = _mm_set_ps1(c);
-  ptrdiff_t off;
 #ifdef _OPENMP
   int omp_flag = omp_in_parallel();
   #pragma omp parallel for if ( (n > TH_OMP_OVERHEAD_THRESHOLD_VEC) && ( 0 == omp_flag) ) private (i)
