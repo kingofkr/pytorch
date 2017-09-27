@@ -17,10 +17,11 @@
 #define PRAGMA(P) __pragma(P)
 #endif
 
-#if (defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE) && (!defined(__PPC_64__)))
-#defined INTEL_FLOAT_OPTIMIZATION
+#if ( (defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)) && (!defined(__PPC_64__)))
+#define INTEL_FLOAT_OPTIMIZATION
 #endif
 
+#if defined(INTEL_FLOAT_OPTIMIZATION)
 #define TH_TENSOR_APPLY_CONTIG_FLOAT(TYPE, TENSOR, CODE) \
 { \
   TYPE *TENSOR##_data = THTensor_(data)(TENSOR); \
