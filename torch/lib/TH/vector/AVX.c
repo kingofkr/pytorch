@@ -9,7 +9,7 @@
 
 #ifdef _OPENMP
 #include <omp.h>
-#define TH_OMP_OVERHEAD_THRESHOLD_VEC 6000
+#define TH_OMP_OVERHEAD_THRESHOLD_VEC 8000
 #endif
 
 void THDoubleVector_copy_AVX(double *y, const double *x, const ptrdiff_t n) {

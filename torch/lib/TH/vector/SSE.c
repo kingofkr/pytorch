@@ -6,7 +6,7 @@
 
 #ifdef _OPENMP
 #include <omp.h>
-#define TH_OMP_OVERHEAD_THRESHOLD_VEC 6000
+#define TH_OMP_OVERHEAD_THRESHOLD_VEC 8000
 #endif
 
 static void THDoubleVector_fill_SSE(double *x, const double c, const ptrdiff_t n) {
